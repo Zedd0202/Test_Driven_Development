@@ -79,6 +79,304 @@ CashRegister를 정의하고 플레이그라운드르 ㄹ실행하면 테스트�
 자 다시 TDD Cycle을 돌려봅시다.
 먼저 Red! 실패하는 테스트를 작성해보자.
 
+```swift
+func testInitAvailableFunds_setsAvailableFunds() {
+        // given
+        let availableFunds = Decimal(100)
+        // when
+        let sut = CashRegister(availableFunds: availableFunds)
+        // then
+        XCTAssertEqual(sut.availableFunds, availableFunds)
+    }
+```
+
+위 코드에서 눈여겨 볼 것은 
+Given, when, then이라는 주석이 들어갔다는 점. 
+이 테스트는 아까의 테스트보다는 복잡하므로 이렇게 세부분으로 나눠서 생각하면 좋음.
+- Given은 특정 조건이 주어지면.
+- When은 어떤 행동이 일어날 때
+- Then은 예상 결과가 발생. 
+
+sut은 테스트 중인 시스템을 나타냄. TDD에서 사용되는 매우 일반적인 이름이라고 해요?
+지금은 CashRegister(availableFunds:) 이니셜라이저가 없으니까 당연히 컴파일 에러가 날거고 이걸 고쳐봅시더
+
+아까 정의”만” 해놓은 CashRegister를
+```swift
+class CashRegister {
+    
+    var availableFunds: Decimal
+    init(availableFunds: Decimal = 0) {
+      self.availableFunds = availableFunds
+    }
+}
+
+```
+로 고치자!
+그럼 이제 컴파일 에러는 사라지고 런 해보면 테스트 패스함.
+Green단계 완료!
+
+다음 단계는 앱코드와 테스트코드를 정리하는 단계.
+아까 처음으로 테스트 추가한거 보면
+```swift
+func testInit_createsCashRegister() {
+        // 2
+        XCTAssertNotNil(CashRegister())
+    }
+```
+이걸 추가했었는데, 우리는 init()메소드가 따로 없고,  init(availableFunds: )가 있음 
+그니까 삭제.
+
+그럼 이제 테스트 코드를 정리했고..
+앱코드 정리를 해보자.
+```swift
+class CashRegister {
+    
+    var availableFunds: Decimal
+    init(availableFunds: Decimal = 0) {
+      self.availableFunds = availableFunds
+    }
+}
+
+```
+보면 이니셜라이저가 availableFunds에 기본값을 0으로 주고 있음. 그래서 아까 
+```swift
+func testInit_createsCashRegister() {
+        // 2
+        XCTAssertNotNil(CashRegister())
+    }
+```
+이것도 에러가 안났던것.
+
+근데 지금 availableFunds에 기본값으로 0을 주는게 합리적인가? 말이 되는가?를 생각해봐야함. 
+- 만약 기본 값을 유지한다면, availableFunds가 예상 기본값으로 설정되어있는지 확인하는 테스트를 추가할 수 있음.
+- 기본값을 유지하지 않는다면? 제거해야지;
+우리는 지금 기본값을 갖는게 의미가 없다고 가정해보자.
+그럼 뭐랬지? 삭제.
+
+```swift
+class CashRegister {
+    
+    var availableFunds: Decimal
+    init(availableFunds: Decimal) {
+      self.availableFunds = availableFunds
+    }
+}
+```
+삭제하자.
+
+이제 리팩터 단계는 끝났고, 다음 TDD Cycle로 넘어가보자.
+
+### TDDing addItem 
+항상 그렇듯이 먼저 실패한 테스트를 작성해야겠찌???
+
+```swift
+func testAddItem_oneItem_addsCostToTransactionTotal() {
+  // given
+  let availableFunds = Decimal(100)
+  let sut = CashRegister(availableFunds: availableFunds)
+  let itemCost = Decimal(42)
+  // when 
+  sut.addItem(itemCost) // error
+// then 
+  XCTAssertEqual(sut.transactionTotal, itemCost) // error
+}
+
+```
+지금 컴파일 에러가 나는데, ㅇㅣ유는 addItem메소드와 transactionTotal프로퍼티가 앖기때문.
+
+암튼 실패하는 테스트를 작성했고, 다음 Green단계로 넘어가보자
+
+테스트를 패스하도록 만들기 위해 최소한의 코드를 작성해보자.
+
+```swift
+class CashRegister {
+    
+    var availableFunds: Decimal
+    var transactionTotal: Decimal = 0
+    init(availableFunds: Decimal) {
+      self.availableFunds = availableFunds
+    }
+     func addItem(_ cost: Decimal) {
+      transactionTotal = cost
+    }
+}
+```
+다음 단계인 리팩터로 가보자.
+
+```swift
+func testAddItem_oneItem_addsCostToTransactionTotal() {
+      // given
+      let availableFunds = Decimal(100)
+      let sut = CashRegister(availableFunds: availableFunds)
+      let itemCost = Decimal(42)
+      // when
+      sut.addItem(itemCost)
+    // then
+      XCTAssertEqual(sut.transactionTotal, itemCost)
+    }
+    
+    func testInitAvailableFunds_setsAvailableFunds() {
+        // given
+        let availableFunds = Decimal(100)
+        // when
+        let sut = CashRegister(availableFunds: availableFunds)
+        // then
+        XCTAssertEqual(sut.availableFunds, availableFunds)
+    }
+```
+아까 리팩터 단계에서 중복된 로직 이런걸 제거할 수 있다고 말했는데, 지금 위 두 테스트를 보면 중복된 로직이 있는 것을 볼 수 있음.
+
+바로
+```swift
+      let availableFunds = Decimal(100)
+      let sut = CashRegister(availableFunds: availableFunds)
+
+```
+이부분
+
+이부분의 중복을 제거하기 위해
+CashRegisterTests내에 변수를 정의한다. 
+```swift
+class CashRegisterTests: XCTestCase {
+    
+   var availableFunds: Decimal!
+    var sut: CashRegister!
+```
+여기서 알고가야 할 사실!
+setup()과 tearDown메소드가 있는데, setup은 각 테스트 메소드가 실행되기 직전에 호출되며 tearDown은 각 테스트 메소드가 완료된 직후에 호출된다. 이러한 메소드들은 중복된 로직을 위치하기에 완벽한 장소 ㅇㅇ
+
+```swift
+// 1
+    override func setUp() {
+        super.setUp()
+        self.availableFunds = 100
+        self.sut = CashRegister(availableFunds: availableFunds)
+    }
+    // 2
+    override func tearDown() {
+        self.availableFunds = nil
+        self.sut = nil
+        super.tearDown()
+    }
+```
+
+1. setup()내에서 super.setup()을 호출하여 슈퍼클래스에세 설정을 수행하도록 함. 그다음에 할 작업 하기
+2. tearDown에서 반대의 작업을 수행한다. 먼저 변수들의 메모리에서 해제시켜주고 마지막에 super.tearDown()을 호출해준다. setup()에서 설정한 모든 프로퍼티가 해제되어야함. 이는 XCTest프레임워크의 작동방식 때문. 테스트 target내에서 각 XCTestCase서브클래스를 인스턴스화하고 모든 테스트 케이스가 실행될때까지 릴리즈 하지 않음. 따라서 많은 테스트 케이스가 있고 tearDown내에서 프로퍼티를 nil로 설정하지 않으면 프로퍼티의 메모리가 필요 이상으로 길게 유지될 수 있음. 또한 테스트 케이스가 충분히 많으면 테스트를 실행 할 때 메모리 및 성능 문제가 발생 할 수 있음
+
+암튼 지금 중복된 로직을 setup으로 옮겼기 때문에
+
+```swift
+func testAddItem_oneItem_addsCostToTransactionTotal() {
+        // given
+        let itemCost = Decimal(42)
+        // when
+        sut.addItem(itemCost)
+        // then
+        XCTAssertEqual(sut.transactionTotal, itemCost)
+    }
+    
+    func testInitAvailableFunds_setsAvailableFunds() {
+    
+        XCTAssertEqual(sut.availableFunds, availableFunds)
+    }
+```
+
+이렇게 리팩터 단계가 끝나고 이제 다음 TDD Cycle로 가보자.
+
+### Adding two items 
+
+testAddItem_oneItem_addsCostToTransactionTotal는 하나의 item에 대해 addItem패스를 확인하지만 2개에대해서는 전달할수도 있고 안할수도..아직 모름
+이것을 테스트 해보자.
+
+```swift
+func testAddItem_twoItems_addsCostsToTransactionTotal() {
+  // given
+  let itemCost = Decimal(42)
+  let itemCost2 = Decimal(20)
+  let expectedTotal = itemCost + itemCost2
+// when 
+  sut.addItem(itemCost)
+  sut.addItem(itemCost2)
+// then 
+  XCTAssertEqual(sut.transactionTotal, expectedTotal)
+}
+
+```
+먼저 실패하는 테스트 작성.
+위 테스트를 돌려보면 당연히 실패하는데, expectedTotal은 42 + 20인데, addItem을 2번하고 난 결과 transactionTotal는 20임 
+왜냐면
+
+```swift
+class CashRegister {
+    
+    var transactionTotal: Decimal = 0
+
+    func addItem(_ cost: Decimal) {
+        transactionTotal = cost
+    }
+}
+```
+transactionTotal에 그냥 cost를 바로 대입하고 있기 때문에. 우리 테스트를 통과하려면
+```swift
+func addItem(_ cost: Decimal) {
+        transactionTotal += cost
+    }
+```
+이렇게 더해줘야함. 이렇게 최소한의 코드로 테스트틀 패스하게 했으니 Green 단계 완료.
+다음 리팩터 단계로 가자.
+
+```swift
+func testAddItem_twoItems_addsCostsToTransactionTotal() {
+  // given
+  let itemCost = Decimal(42)
+  let itemCost2 = Decimal(20)
+  let expectedTotal = itemCost + itemCost2
+// when 
+  sut.addItem(itemCost)
+  sut.addItem(itemCost2)
+// then 
+  XCTAssertEqual(sut.transactionTotal, expectedTotal)
+}
+
+```
+여기서 itemCost가 중복되고 있음. 
+
+CashRegisterTests 안에 
+```swift
+    var itemCost: Decimal!
+```
+프로퍼티 정의. Setup 및 tearDown에 잘 해주고
+```swift
+func testAddItem_twoItems_addsCostsToTransactionTotal() {
+      // given
+      let itemCost2 = Decimal(20)
+      let expectedTotal = itemCost + itemCost2
+       
+    // when
+      sut.addItem(itemCost)
+      sut.addItem(itemCost2)
+    // then
+      XCTAssertEqual(sut.transactionTotal, expectedTotal)
+    }
+    
+    func testAddItem_oneItem_addsCostToTransactionTotal() {
+
+        // when
+        sut.addItem(itemCost)
+        // then
+        XCTAssertEqual(sut.transactionTotal, itemCost)
+    }
+```
+이렇게 itemCost를 정의하던 부분을 지울 수 있음. 
+또 중복된 로직을 찾아보자면 
+```swift
+        sut.addItem(itemCost)
+
+```
+이 부분! 이 부분도 지금 중복인데 그럼 이부분도 setup으로 옮겨야 할까 ?
+안됨.
+왜냐면 아까 말했듯이 setup은 각 테스트케이스가 시작하기 전에 호출되는데 addItem이 필요없는 다른 테스트를 작성할 수 있음. 따라서 얘를 setup으로 옮겨서는 안되고 그대로 둬야한다. 
+
 
 
 
